@@ -1,0 +1,339 @@
+---
+title: "Stable Half Hourly Mean"
+author: "Bibek Kandel"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#How many half-hourly values are needed to get a stable daily mean as to use it in forecasting?
+
+This script analyzes the mean and standard deviation (SD) calculated from randomly sampled half-hourly values from a complete dataset consisting of 48 values for a day. The random sampling is carried out 48 times for each run, thus, giving rise to 48 different means and SD. This process is reiterated 48 times to further randomize the process.
+
+```{r}
+#Clear workspace
+rm(list=ls())
+```
+
+```{r}
+#Load packages
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+```
+
+```{r}
+# Read compiled file: From Eddy Pro using basic processing
+# Original file from Brenda on 11 May 2021
+# Light data cleaning using EddyPro_CleanUp.R
+
+dt1 <-read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/EddyFlux_Processing/EddyPro_Cleaned_L1.csv")
+
+```
+
+```{r}
+# Check here on EDI an make sure you are using the most up to date file.
+# https://portal.edirepository.org/nis/mapbrowse?packageid=edi.1061.2 
+# if not pulll in the file path from EDI
+
+
+# read in the data file downloaded from EDI
+dt2 <-read_csv("https://pasta.lternet.edu/package/data/eml/edi/1061/2/f837d12dc12ab37a6772598578875e00") 
+
+#Create a full dataset
+ec_full <- dt2%>%
+  bind_rows(.,dt1)
+```
+
+```{r}
+#Extract the mean flux values 
+hh_flux <-  ec_full %>%
+  select(c('date', 'time','co2_flux_umolm2s','ch4_flux_umolm2s'))
+  
+#Count how many data points are available at each half hour interval
+availability <- hh_flux %>% group_by(time) %>% 
+  select(co2_flux_umolm2s, ch4_flux_umolm2s) %>% 
+  summarise(co2_available = 100-sum(is.na(co2_flux_umolm2s))/n()*100,
+            ch4_available = 100-sum(is.na(ch4_flux_umolm2s))/n()*100,
+            co2_n = n() - sum(is.na(co2_flux_umolm2s)),
+            ch4_n = n() - sum(is.na(ch4_flux_umolm2s)))
+            
+availability
+
+```
+
+```{r}
+#Plot the data availability by half-hour
+avail <- availability %>%
+  pivot_longer(cols = co2_available:ch4_available, names_to = "variable", 
+               values_to = "flux_value")
+
+ggplot()+
+  geom_point(data =avail, aes(x=time, y=flux_value, color = variable))+
+  ylab("% of available half-hourly data")
+
+```
+
+```{r}
+#calculate the mean flux values by half hour
+hh_flux2 = subset(hh_flux, select = -c(date))
+hh_mean <- hh_flux2 %>%
+  group_by(time) %>%
+  summarise_all(mean, na.rm = TRUE)
+
+#Plot the values
+ggplot()+
+  geom_point(data =hh_mean, aes(x=time, y=co2_flux_umolm2s))+
+  ylab("CO2")+
+  ggtitle("Half hourly mean values across the day")
+
+ggplot()+
+  geom_point(data =hh_mean, aes(x=time, y=ch4_flux_umolm2s))+
+  ylab("CH4")+
+  ggtitle("Half hourly mean values across the day")
+
+```
+
+```{r}
+#Count the number of half-hourly values each day
+hh_flux_noNA <- na.omit(hh_flux)
+hh_count <- hh_flux_noNA %>%
+  group_by(date) %>%
+  summarise(frequency = n())
+
+ggplot(hh_count, aes(x = frequency)) +
+  ylab("No of days")+
+  xlab("Half hours")+
+  geom_bar()
+
+```
+
+```{r}
+#Calculate the mean flux values by day
+hh_dmean <- hh_flux_noNA %>%
+  select(c(date, co2_flux_umolm2s,ch4_flux_umolm2s)) %>%
+  group_by(date) %>%
+  summarise_all(mean)
+
+```
+
+```{r}
+#Join two dataframes with mean values and count values
+hh_merged <- merge(x = hh_dmean, y = hh_count, by = "date", all = TRUE)
+
+#Plot the mean values versus the number of half hourly values present
+ggplot()+
+  geom_point(data = hh_merged, aes(x=frequency, y=co2_flux_umolm2s, color = frequency))+
+  xlab("Half hours")+
+  ylab("mean_CO2")
+
+ggplot()+
+  geom_point(data = hh_merged, aes(x=frequency, y=ch4_flux_umolm2s, color = frequency))+
+  xlab("Half hours")+
+  ylab("mean_CH4")
+
+```
+
+```{r}
+#Select the day with 48 half hourly values
+hh_merged2 <- hh_merged %>% filter(frequency == 48)
+
+```
+
+```{r}
+#Create a table with days having all 48 half hourly values
+all_48 <- data.frame()
+
+for(i in (hh_merged2$date)){
+  curr_ens <- hh_flux_noNA |> 
+    filter(date == i) |> 
+    select(date, time, co2_flux_umolm2s, ch4_flux_umolm2s)
+
+  all_48 <- bind_rows(all_48, curr_ens)
+}
+
+```
+
+#If you want to run the analysis using 48 half-hourly values for a single day then use the code in the chunk below.
+
+```{r}
+#Or select a single day with all 48 half hourly values
+oneday_48 <- hh_flux_noNA %>% filter(date == "2020-04-05")
+
+```
+
+#For mean
+
+```{r}
+#Random sampling using different sizes
+all_runs <- NULL
+n = 1:48
+for(j in 1:48) { #change j to change the no of ensemble members (repeats of run)
+  multiple_runs <- tibble(run_no = rep(j, times = 48), s_size = n, samp_mean = as.double(NA))
+  
+sampling_table <- tibble(run_no = rep(j, times = 48), s_size = n, samp_mean = as.double(NA))
+
+#random sampling of half hourly values anywhere between 1-48 and calculates mean
+for(i in 1:length(n)) {
+size = i
+rm <- sample(oneday_48$co2_flux_umolm2s, size = i, replace = FALSE) #Edit this for one-day run
+m_value <- mean(rm)
+df <- tibble(s_size = i, samp_mean = m_value)
+sampling_table <- sampling_table %>%
+  rows_update(df, by = c("s_size"))
+}
+
+multiple_runs <- multiple_runs %>%
+  rows_update(sampling_table, by = c("run_no", "s_size"))
+
+all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
+}
+
+```
+
+```{r}
+#Plot the observations
+ggplot()+
+  geom_line(data = all_runs, aes(x=s_size, y=samp_mean, group = run_no, color = "orange"), 
+            show.legend = F)+
+ggtitle("Distributions of half-hourly means randomly sampled from 48 data points
+  (each line represents a set of means for a complete run)")
+
+```
+
+#For Standard deviation
+
+```{r}
+#Random sampling using different sizes
+all_runs <- NULL
+n = 1:48
+for(j in 1:48) { #change j to change the no of ensemble members (repeats of run)
+  multiple_runs <- tibble(run_no = rep(j, times = 48), s_size = n, samp_SD = as.double(NA))
+  
+sampling_table <- tibble(run_no = rep(j, times = 48), s_size = n, samp_SD = as.double(NA))
+
+#random sampling of half hourly values anywhere between 1-48 and calculates mean
+for(i in 1:length(n)) {
+size = i
+rm <- sample(oneday_48$co2_flux_umolm2s, size = i, replace = FALSE) #Edit this for one-day run
+sd_value <- sd(rm)
+df <- tibble(s_size = i, samp_SD = sd_value)
+sampling_table <- sampling_table %>%
+  rows_update(df, by = c("s_size"))
+}
+
+multiple_runs <- multiple_runs %>%
+  rows_update(sampling_table, by = c("run_no", "s_size"))
+
+all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
+}
+
+```
+
+```{r}
+#Plot the observations
+ggplot()+
+  geom_line(data = all_runs, aes(x=s_size, y=samp_SD, group = run_no, color = "orange"), 
+            show.legend = F)+
+ggtitle("Distributions of half-hourly SDs randomly sampled from 48 data points
+  (each line represents a set of SDs for a complete run)")
+
+```
+
+#Now, let's use all the available days and half-hourly values to create a sampling pool and run the analysis.
+
+#For mean
+
+```{r}
+#Random sampling using different sizes
+all_runs <- NULL
+n = 1:48
+for(j in 1:48) { #change j to change the no of ensemble members (repeats of run)
+  multiple_runs <- tibble(run_no = rep(j, times = 48), s_size = n, samp_mean = as.double(NA))
+  
+sampling_table <- tibble(run_no = rep(j, times = 48), s_size = n, samp_mean = as.double(NA))
+
+#random sampling of half hourly values anywhere between 1-48 and calculates mean
+for(i in 1:length(n)) {
+size = i
+rm <- sample(all_48$co2_flux_umolm2s, size = i, replace = FALSE) #Edit this for one-day run
+m_value <- mean(rm)
+df <- tibble(s_size = i, samp_mean = m_value)
+sampling_table <- sampling_table %>%
+  rows_update(df, by = c("s_size"))
+}
+
+multiple_runs <- multiple_runs %>%
+  rows_update(sampling_table, by = c("run_no", "s_size"))
+
+all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
+}
+
+```
+
+```{r}
+#Plot the observations
+ggplot()+
+  geom_line(data = all_runs, aes(x=s_size, y=samp_mean, group = run_no, color = "orange"), 
+            show.legend = F)+
+ggtitle("Distributions of half-hourly means randomly sampled from 48 data points
+  (each line represents a set of means for a complete run)")
+
+```
+
+#For Standard deviation
+
+```{r}
+#Random sampling using different sizes
+all_runs <- NULL
+n = 1:48
+for(j in 1:48) { #change j to change the no of ensemble members (repeats of run)
+  multiple_runs <- tibble(run_no = rep(j, times = 48), s_size = n, samp_SD = as.double(NA))
+  
+sampling_table <- tibble(run_no = rep(j, times = 48), s_size = n, samp_SD = as.double(NA))
+
+#random sampling of half hourly values anywhere between 1-48 and calculates mean
+for(i in 1:length(n)) {
+size = i
+rm <- sample(all_48$co2_flux_umolm2s, size = i, replace = FALSE) #Edit this for one-day run
+sd_value <- sd(rm)
+df <- tibble(s_size = i, samp_SD = sd_value)
+sampling_table <- sampling_table %>%
+  rows_update(df, by = c("s_size"))
+}
+
+multiple_runs <- multiple_runs %>%
+  rows_update(sampling_table, by = c("run_no", "s_size"))
+
+all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
+}
+
+```
+
+```{r}
+#Plot the observations
+ggplot()+
+  geom_line(data = all_runs, aes(x=s_size, y=samp_SD, group = run_no, color = "orange"), 
+            show.legend = F)+
+ggtitle("Distributions of half-hourly SDs randomly sampled from 48 data points
+  (each line represents a set of SDs for a complete run)")
+
+```
+
+Questions:
+1. How many times do we want to run the cycle (in this case 48 times) to optimize the stability    of mean and SD?
+2. How do we determine the cut-off for the stable mean and SD?
+
+
+
+
+
+
+
+
+
+
+
