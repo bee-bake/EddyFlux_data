@@ -189,138 +189,76 @@ sampling_table <- sampling_table %>%
 multiple_runs <- multiple_runs %>%
   rows_update(sampling_table, by = c("run_no", "s_size"))
 
+
 all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
 }
 
+#SD of means grouped by sample size
+all_runs |> 
+  group_by(s_size) |> 
+  summarize(sd = sd(samp_mean)) |> 
+  ggplot(aes(x=s_size, y=sd)) + 
+  geom_line()+
+ggtitle("Distribution of SDs calculated from hh means - single day
+  (Means are obtained from the means of randomly sampled hh values)")
+
 ```
 
-```{r}
-#Plot the observations
-ggplot()+
-  geom_line(data = all_runs, aes(x=s_size, y=samp_mean, group = run_no, color = "orange"), 
-            show.legend = F)+
-ggtitle("Distributions of half-hourly means randomly sampled from 48 data points
-  (each line represents a set of means for a complete run)")
 
-```
+#Now, let's use all the available days and half-hourly values to create a sampling pool and run the analysis. The random sampling for each day is carried out for 5 different runs and the obtained means are averaged to get a single mean for that sample size and day.
 
-#For Standard deviation
+#For mean and SD
 
 ```{r}
 #Random sampling using different sizes
 all_runs <- NULL
 n = 1:48
-for(j in 1:48) { #change j to change the no of ensemble members (repeats of run)
-  multiple_runs <- tibble(run_no = rep(j, times = 48), s_size = n, samp_SD = as.double(NA))
+#Extract the dates and check the range
+md <- unique(as.numeric(format(all_48$date, "%Y%m%d")))
+md <- ymd(unique(as.numeric(md)))
+all_48$date[c(which.min(md), which.max(md))]
+i=0
+
+for (k in 1:length(md)) {
+i=i+1
+
+for (l in 1:5) {
+
+#change j to change the no of ensemble members (repeats of run)
+multiple_runs <- tibble(date = rep(md[i], times = 48), run_no = rep(l, times = 48), s_size = n, samp_mean = as.double(NA))
+
+sampling_table <- tibble(date = rep(md[i], times = 48), run_no = rep(l, times = 48), s_size = n, samp_mean = as.double(NA))
+
+doi <- md[i]
+sampling_dataset <- all_48 |> filter(date == doi)
   
-sampling_table <- tibble(run_no = rep(j, times = 48), s_size = n, samp_SD = as.double(NA))
-
 #random sampling of half hourly values anywhere between 1-48 and calculates mean
-for(i in 1:length(n)) {
-size = i
-rm <- sample(oneday_48$co2_flux_umolm2s, size = i, replace = FALSE) #Edit this for one-day run
-sd_value <- sd(rm)
-df <- tibble(s_size = i, samp_SD = sd_value)
-sampling_table <- sampling_table %>%
-  rows_update(df, by = c("s_size"))
-}
-
-multiple_runs <- multiple_runs %>%
-  rows_update(sampling_table, by = c("run_no", "s_size"))
-
-all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
-}
-
-```
-
-```{r}
-#Plot the observations
-ggplot()+
-  geom_line(data = all_runs, aes(x=s_size, y=samp_SD, group = run_no, color = "orange"), 
-            show.legend = F)+
-ggtitle("Distributions of half-hourly SDs randomly sampled from 48 data points
-  (each line represents a set of SDs for a complete run)")
-
-```
-
-#Now, let's use all the available days and half-hourly values to create a sampling pool and run the analysis.
-
-#For mean
-
-```{r}
-#Random sampling using different sizes
-all_runs <- NULL
-n = 1:48
-for(j in 1:48) { #change j to change the no of ensemble members (repeats of run)
-  multiple_runs <- tibble(run_no = rep(j, times = 48), s_size = n, samp_mean = as.double(NA))
-  
-sampling_table <- tibble(run_no = rep(j, times = 48), s_size = n, samp_mean = as.double(NA))
-
-#random sampling of half hourly values anywhere between 1-48 and calculates mean
-for(i in 1:length(n)) {
-size = i
-rm <- sample(all_48$co2_flux_umolm2s, size = i, replace = FALSE) #Edit this for one-day run
+for(j in 1:length(n)) {
+size = j
+rm <- sample(sampling_dataset$co2_flux_umolm2s, size = j, replace = FALSE) #Edit this for one-day run
 m_value <- mean(rm)
-df <- tibble(s_size = i, samp_mean = m_value)
+df <- tibble(s_size = j, samp_mean = m_value)
 sampling_table <- sampling_table %>%
   rows_update(df, by = c("s_size"))
 }
 
 multiple_runs <- multiple_runs %>%
-  rows_update(sampling_table, by = c("run_no", "s_size"))
+  rows_update(sampling_table, by = c("date", "run_no", "s_size"))
 
 all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
 }
-
-```
-
-```{r}
-#Plot the observations
-ggplot()+
-  geom_line(data = all_runs, aes(x=s_size, y=samp_mean, group = run_no, color = "orange"), 
-            show.legend = F)+
-ggtitle("Distributions of half-hourly means randomly sampled from 48 data points
-  (each line represents a set of means for a complete run)")
-
-```
-
-#For Standard deviation
-
-```{r}
-#Random sampling using different sizes
-all_runs <- NULL
-n = 1:48
-for(j in 1:48) { #change j to change the no of ensemble members (repeats of run)
-  multiple_runs <- tibble(run_no = rep(j, times = 48), s_size = n, samp_SD = as.double(NA))
-  
-sampling_table <- tibble(run_no = rep(j, times = 48), s_size = n, samp_SD = as.double(NA))
-
-#random sampling of half hourly values anywhere between 1-48 and calculates mean
-for(i in 1:length(n)) {
-size = i
-rm <- sample(all_48$co2_flux_umolm2s, size = i, replace = FALSE) #Edit this for one-day run
-sd_value <- sd(rm)
-df <- tibble(s_size = i, samp_SD = sd_value)
-sampling_table <- sampling_table %>%
-  rows_update(df, by = c("s_size"))
 }
 
-multiple_runs <- multiple_runs %>%
-  rows_update(sampling_table, by = c("run_no", "s_size"))
-
-all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
-}
-
-```
-
-```{r}
-#Plot the observations
-ggplot()+
-  geom_line(data = all_runs, aes(x=s_size, y=samp_SD, group = run_no, color = "orange"), 
-            show.legend = F)+
-ggtitle("Distributions of half-hourly SDs randomly sampled from 48 data points
-  (each line represents a set of SDs for a complete run)")
-
+#SD of means grouped by sample size
+all_runs |> 
+  group_by(s_size, date) |> 
+  summarize(run_mean = mean(samp_mean)) |> 
+  summarize(sd = sd(run_mean))|>
+  ggplot(aes(x=s_size, y=sd, colour = "orange")) +
+  geom_line(show.legend = F)+
+ggtitle("Distribution of SDs calculated from hh means - all days
+  (Means are obtained from the means of multiple runs of randomly 
+  sampled hh values)")
 ```
 
 Questions:
