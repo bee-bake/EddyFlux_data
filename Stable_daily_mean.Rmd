@@ -171,7 +171,7 @@ oneday_48 <- hh_flux_noNA %>% filter(date == "2020-04-05")
 #Random sampling using different sizes
 all_runs <- NULL
 n = 1:48
-for(j in 1:48) { #change j to change the no of ensemble members (repeats of run)
+for(j in 1:5) { #change j to change the no of ensemble members (repeats of run)
   multiple_runs <- tibble(run_no = rep(j, times = 48), s_size = n, samp_mean = as.double(NA))
   
 sampling_table <- tibble(run_no = rep(j, times = 48), s_size = n, samp_mean = as.double(NA))
@@ -253,8 +253,8 @@ all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
 all_runs |> 
   group_by(s_size, date) |> 
   summarize(run_mean = mean(samp_mean)) |> 
-  summarize(sd = sd(run_mean))|>
-  ggplot(aes(x=s_size, y=sd, colour = "orange")) +
+  summarize(sd = sd(run_mean)) |> 
+ggplot(aes(x=s_size, y=sd, colour = "orange")) +
   geom_line(show.legend = F)+
 ggtitle("Distribution of SDs calculated from hh means - all days
   (Means are obtained from the means of multiple runs of randomly 
