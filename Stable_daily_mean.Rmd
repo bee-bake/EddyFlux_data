@@ -44,15 +44,14 @@ dt1 <-read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/D
 dt2 <-read_csv("https://pasta.lternet.edu/package/data/eml/edi/1061/2/f837d12dc12ab37a6772598578875e00") 
 
 #Create a full dataset
-ec_full <- dt2%>%
-  bind_rows(.,dt1)
+ec_full <- bind_rows(dt2, dt1)
 ```
 
 ```{r}
 #Extract the mean flux values 
 hh_flux <-  ec_full %>%
   select(c('date', 'time','co2_flux_umolm2s','ch4_flux_umolm2s'))
-  
+
 #Count how many data points are available at each half hour interval
 availability <- hh_flux %>% group_by(time) %>% 
   select(co2_flux_umolm2s, ch4_flux_umolm2s) %>% 
@@ -60,7 +59,7 @@ availability <- hh_flux %>% group_by(time) %>%
             ch4_available = 100-sum(is.na(ch4_flux_umolm2s))/n()*100,
             co2_n = n() - sum(is.na(co2_flux_umolm2s)),
             ch4_n = n() - sum(is.na(ch4_flux_umolm2s)))
-            
+
 availability
 
 ```
@@ -151,7 +150,7 @@ for(i in (hh_merged2$date)){
   curr_ens <- hh_flux_noNA |> 
     filter(date == i) |> 
     select(date, time, co2_flux_umolm2s, ch4_flux_umolm2s)
-
+  
   all_48 <- bind_rows(all_48, curr_ens)
 }
 
@@ -171,26 +170,26 @@ oneday_48 <- hh_flux_noNA %>% filter(date == "2020-04-05")
 #Random sampling using different sizes
 all_runs <- NULL
 n = 1:48
-for(j in 1:5) { #change j to change the no of ensemble members (repeats of run)
+for(j in 1:30) { #change j to change the no of ensemble members (repeats of run)
   multiple_runs <- tibble(run_no = rep(j, times = 48), s_size = n, samp_mean = as.double(NA))
   
-sampling_table <- tibble(run_no = rep(j, times = 48), s_size = n, samp_mean = as.double(NA))
-
-#random sampling of half hourly values anywhere between 1-48 and calculates mean
-for(i in 1:length(n)) {
-size = i
-rm <- sample(oneday_48$co2_flux_umolm2s, size = i, replace = FALSE) #Edit this for one-day run
-m_value <- mean(rm)
-df <- tibble(s_size = i, samp_mean = m_value)
-sampling_table <- sampling_table %>%
-  rows_update(df, by = c("s_size"))
-}
-
-multiple_runs <- multiple_runs %>%
-  rows_update(sampling_table, by = c("run_no", "s_size"))
-
-
-all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
+  sampling_table <- tibble(run_no = rep(j, times = 48), s_size = n, samp_mean = as.double(NA))
+  
+  #random sampling of half hourly values anywhere between 1-48 and calculates mean
+  for(i in 1:length(n)) {
+    size = i
+    rm <- sample(oneday_48$co2_flux_umolm2s, size = i, replace = FALSE) #Edit this for one-day run
+    m_value <- mean(rm)
+    df <- tibble(s_size = i, samp_mean = m_value)
+    sampling_table <- sampling_table %>%
+      rows_update(df, by = c("s_size"))
+  }
+  
+  multiple_runs <- multiple_runs %>%
+    rows_update(sampling_table, by = c("run_no", "s_size"))
+  
+  
+  all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
 }
 
 #SD of means grouped by sample size
@@ -199,13 +198,13 @@ all_runs |>
   summarize(sd = sd(samp_mean)) |> 
   ggplot(aes(x=s_size, y=sd)) + 
   geom_line()+
-ggtitle("Distribution of SDs calculated from hh means - single day
+  ggtitle("Distribution of SDs calculated from hh means - single day
   (Means are obtained from the means of randomly sampled hh values)")
 
 ```
 
 
-#Now, let's use all the available days and half-hourly values to create a sampling pool and run the analysis. The random sampling for each day is carried out for 5 different runs and the obtained means are averaged to get a single mean for that sample size and day.
+#Now, let's use all the available days and half-hourly values for the analysis. The random sampling for each day is carried out for 5 different runs and the obtained means are averaged to get a single mean for that sample size and day.
 
 #For mean and SD
 
@@ -217,54 +216,54 @@ n = 1:48
 md <- unique(as.numeric(format(all_48$date, "%Y%m%d")))
 md <- ymd(unique(as.numeric(md)))
 all_48$date[c(which.min(md), which.max(md))]
-i=0
 
 for (k in 1:length(md)) {
-i=i+1
-
-for (l in 1:5) {
-
-#change j to change the no of ensemble members (repeats of run)
-multiple_runs <- tibble(date = rep(md[i], times = 48), run_no = rep(l, times = 48), s_size = n, samp_mean = as.double(NA))
-
-sampling_table <- tibble(date = rep(md[i], times = 48), run_no = rep(l, times = 48), s_size = n, samp_mean = as.double(NA))
-
-doi <- md[i]
-sampling_dataset <- all_48 |> filter(date == doi)
   
-#random sampling of half hourly values anywhere between 1-48 and calculates mean
-for(j in 1:length(n)) {
-size = j
-rm <- sample(sampling_dataset$co2_flux_umolm2s, size = j, replace = FALSE) #Edit this for one-day run
-m_value <- mean(rm)
-df <- tibble(s_size = j, samp_mean = m_value)
-sampling_table <- sampling_table %>%
-  rows_update(df, by = c("s_size"))
-}
-
-multiple_runs <- multiple_runs %>%
-  rows_update(sampling_table, by = c("date", "run_no", "s_size"))
-
-all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
-}
+  for (l in 1:30) { #30 for the statistical threshold of minimum runs
+    
+    #change j to change the no of ensemble members (repeats of run)
+    multiple_runs <- tibble(date = rep(md[k], times = 48), run_no = rep(l, times = 48), s_size = n, samp_mean = as.double(NA))
+    
+    sampling_table <- tibble(date = rep(md[k], times = 48), run_no = rep(l, times = 48), s_size = n, samp_mean = as.double(NA))
+    
+    doi <- md[k]
+    sampling_dataset <- all_48 |> filter(date == doi)
+    
+    #random sampling of half hourly values anywhere between 1-48 and calculates mean
+    for(j in 1:length(n)) {
+      size = j
+      rm <- sample(sampling_dataset$co2_flux_umolm2s, size = j, replace = FALSE) #Edit this for one-day run
+      m_value <- mean(rm)
+      df <- tibble(s_size = j, samp_mean = m_value)
+      sampling_table <- sampling_table %>%
+        rows_update(df, by = c("s_size"))
+    }
+    
+    multiple_runs <- multiple_runs %>%
+      rows_update(sampling_table, by = c("date", "run_no", "s_size"))
+    
+    all_runs <- dplyr::bind_rows(all_runs, multiple_runs)
+  }
 }
 
 #SD of means grouped by sample size
 all_runs |> 
   group_by(s_size, date) |> 
-  summarize(run_mean = mean(samp_mean)) |> 
-  summarize(sd = sd(run_mean)) |> 
-ggplot(aes(x=s_size, y=sd, colour = "orange")) +
+  summarize(run_mean = sd(samp_mean)) |> 
+  summarize(sd = mean(run_mean)) |> 
+  ggplot(aes(x=s_size, y=sd, colour = "orange")) +
   geom_line(show.legend = F)+
-ggtitle("Distribution of SDs calculated from hh means - all days
+  ggtitle("Distribution of SDs calculated from hh means - all days
   (Means are obtained from the means of multiple runs of randomly 
   sampled hh values)")
 ```
 
 Questions:
-1. How many times do we want to run the cycle (in this case 48 times) to optimize the stability    of mean and SD?
-2. How do we determine the cut-off for the stable mean and SD?
-
+1. How many times do we want to run the cycle (in this case 30 times) to         optimize the stability of the mean and sd?
+   Ans: Typically, 30 runs are considered a threshold for the stable mean and         sd. The more number of runs, the more stable mean.
+2. How do we determine the cut-off for the stable mean and sd?
+3. Does it matter if we sample from one big pool of all half hourly values or    just from the means of the respective day?
+   Ans: We will sample from the half hourly values from the day of interest           and not from a common pool.
 
 
 
