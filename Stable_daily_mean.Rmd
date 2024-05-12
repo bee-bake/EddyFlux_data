@@ -691,7 +691,7 @@ ggplot(complete_hh_series, aes(x = frequency, y = cum_proportion)) +
   geom_hline(yintercept=0.92, col = "red", lty = 2, lwd = 0.7)
 
 ```
-#Let's apply the cut-off at 30 half hourly values and assess the data loss after filtering for both wind directions and u star.
+#Let's apply the cut-off at 30 half hourly values and assess the data loss after filtering for both wind directions and u star threshold.
 
 ```{r}
 #Calculate the proportion of data represented by available half hourly values
