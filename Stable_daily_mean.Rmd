@@ -654,7 +654,7 @@ gap_filled_countCH4 <- gap_filled %>%
 
 p4 <- ggplot(gap_filled_countCH4, aes(x = frequency)) +
   ylab("No of days")+
-  xlab("Half hours")+ ggtitle("Data availability after footprint and u star filter for CH4") +
+  xlab("Half hours") + ggtitle("Data availability after footprint and u star filter for CH4") +
   geom_bar()
 
 p1/p3
