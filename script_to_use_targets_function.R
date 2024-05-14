@@ -1,7 +1,8 @@
 #Run the function and create targets dataset with daily flux mean averaged over...
 #..all the available half hourly values without any cut-off
 #Use a predefined function to import the data
-source("generate_EddyFLux_ghg_targets_function.R")
+library(patchwork)
+source("generate_EddyFLux_ghg_targets_function_without_cutoff.R")
 targets_without_stable_mean <- generate_EddyFlux_ghg_targets_function(
   
   flux_current_data_file <- "https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/EddyFlux_Processing/EddyPro_Cleaned_L1.csv",
@@ -29,11 +30,10 @@ p2 <- ggplot(targets_without_stable_mean_wider, aes(x = as.Date(datetime)))+
   ylim(-0.045, 0.052)
 p1/p2
 
-
 #Now, let's run the function and create targets dataset with daily flux mean averaged over...
 #..all the available half hourly values with the cut-off at 30!
 #Use a predefined function to import the data
-source("generate_EddyFLux_ghg_targets_function.R")
+source("generate_EddyFLux_ghg_targets_function_with_cutoff.R")
 targets_with_stable_mean <- generate_EddyFlux_ghg_targets_function(
   
   flux_current_data_file <- "https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/EddyFlux_Processing/EddyPro_Cleaned_L1.csv",
