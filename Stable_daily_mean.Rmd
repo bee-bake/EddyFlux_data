@@ -627,6 +627,7 @@ p2 <- ggplot(gap_unfilled_countCH4, aes(x = frequency)) +
 
 
 ```{r, warning=FALSE}
+library(patchwork)
 #Import the gap filled dataset but use columns that are not gap filled
 gap_filled <- read_csv("2024-05-10_EC_processed_withBDScript.csv")
 
