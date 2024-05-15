@@ -2,6 +2,7 @@
 #..all the available half hourly values without any cut-off
 #Use a predefined function to import the data
 library(patchwork)
+library(readr)
 source("generate_EddyFLux_ghg_targets_function_without_cutoff.R")
 targets_without_stable_mean <- generate_EddyFlux_ghg_targets_function(
   
