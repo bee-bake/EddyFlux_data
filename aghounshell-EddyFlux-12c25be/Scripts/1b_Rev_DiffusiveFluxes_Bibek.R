@@ -28,7 +28,7 @@ pacman::p_load(tidyverse,ggplot2,ggpubr,LakeMetabolizer,zoo,scales,lubridate,
 #infile1 <- paste0(getwd(),"/Data/Met_final_2015_2023.csv")
 #download.file(inUrl1,infile1,method="curl")
 
-met_edi <- read.csv("./Data/Met_final_2015_2023.csv", header=T) %>%
+met_edi <- read.csv("C:/Users/13188/Desktop/Data_repository/Met_final_2015_2023.csv", header=T) %>%
   mutate(DateTime = as.POSIXct(strptime(DateTime, "%Y-%m-%d %H:%M:%S", tz="EST"))) %>% 
   filter(DateTime > as.POSIXct("2019-12-31"))
 
@@ -92,7 +92,7 @@ names(met_30_2)[names(met_30_2) == 'DateTime_Adj'] <- 'DateTime'
 #download.file(inUrl1,infile1,method="curl")
 
 #Filter the date and depth needed and convert to fluxes
-ghg_EDI <- read.csv("./Data/final_GHG_2015_2023.csv") %>% 
+ghg_EDI <- read.csv("C:/Users/13188/Desktop/Data_repository/final_GHG_2015_2023.csv") %>% 
   mutate(DateTime = as.POSIXct(strptime(DateTime, "%Y-%m-%d %H:%M", tz="EST"))) %>% 
   filter(Reservoir == "FCR" & Site == 50 & Depth_m == 0.1) %>% 
   filter(DateTime >= "2020-01-01") %>% 
@@ -132,7 +132,7 @@ ghg_fluxes <- ghg %>%
 #infile1 <- paste0(getwd(),"/Data/FCR_Catwalk_2018_2024.csv")
 #download.file(inUrl1,infile1,method="curl")
 
-catwalk_edi <- read.csv("./Data/FCR_Catwalk_2018_2024.csv",header = T)%>%
+catwalk_edi <- read.csv("C:/Users/13188/Desktop/Data_repository/FCR_Catwalk_2018_2024.csv",header = T)%>%
   mutate(DateTime = as.POSIXct(strptime(DateTime, "%Y-%m-%d %H:%M:%S", tz="EST"))) %>% 
   filter(DateTime >= "2020-01-01") %>% 
   select(DateTime, ThermistorTemp_C_surface, ThermistorTemp_C_1, ThermistorTemp_C_2, ThermistorTemp_C_3,
@@ -155,7 +155,7 @@ catwalk_all <- bind_rows(catwalk_edi, catwalk_2024)%>%
   mutate(Temp_diff = ThermistorTemp_C_surface - ThermistorTemp_C_9)
 
 #Save the file
-write.csv(catwalk_all,"./Data/FCR_Catwalk_2020May_2024April.csv")
+write.csv(catwalk_all,"C:/Users/13188/Desktop/Data_repository/FCR_Catwalk_2020May_2024April.csv")
 
 # Calculate average half-hourly values
 # Select data every 30 minutes from Jan 2020 to end of met data
@@ -185,7 +185,7 @@ all_data <- left_join(met_30_2,catwalk_30,by="DateTime")
 #infile1 <- paste0(getwd(),"/Data/CTD_final_2013_2024.csv")
 #download.file(inUrl1,infile1,method="curl")
 
-ctd <- read.csv("./Data/CTD_final_2013_2024.csv") %>% 
+ctd <- read.csv("C:/Users/13188/Desktop/Data_repository/CTD_final_2013_2024.csv") %>% 
   mutate(DateTime = as.POSIXct(DateTime, "%Y-%m-%d %H:%M:%S", tz = "EST"))
 
 ctd <- ctd %>% 
@@ -356,7 +356,7 @@ k600_corr <- k600_corr %>%
          AirTemp_Average_C = Ts)
 
 ## Save k600 corrected values
-write.csv(k600_corr,"./Data/20220617_k600_corr.csv", row.names = FALSE)
+write.csv(k600_corr,"C:/Users/13188/Desktop/Data_repository/2024_05_23_k600_corr.csv", row.names = FALSE)
 
 ###############################################################################
 
@@ -371,7 +371,7 @@ ghg_fluxes <- left_join(ghg_fluxes,k600_corr,by="DateTime")
 
 current_ec <- read.csv("C:/Users/13188/Desktop/Reservoirs/Data/DataNotYetUploadedToEDI/EddyFlux_Processing/EddyPro_Cleaned_L1.csv")
 
-ec <- read.csv("./Data/EddyPro_cleaned_2020_2023.csv")
+ec <- read.csv("C:/Users/13188/Desktop/Data_repository/EddyPro_cleaned_2020_2023.csv")
 
 #Create a full dataset
 ec_full <- rbind(ec, current_ec)
@@ -531,9 +531,9 @@ fluxes_all <- fluxes_all %>%
   select(-c(Rep_fn1,Rep_fn2))
 
 ## Save diffusive GHG fluxes
-write.csv(fluxes_all,"./Data/2022_2024_diffusive_fluxes_all.csv",row.names = FALSE)
+write.csv(fluxes_all,"C:/Users/13188/Desktop/Data_repository/2022_2024_diffusive_fluxes_all.csv",row.names = FALSE)
 
-write.csv(fluxes_avg,"./Data/2020_2024_diffusive_fluxes_avg.csv",row.names = FALSE)
+write.csv(fluxes_avg,"C:/Users/13188/Desktop/Data_repository/2020_2024_diffusive_fluxes_avg.csv",row.names = FALSE)
 
 ###############################################################################
 
@@ -631,4 +631,4 @@ co2_diff <- ggplot(fluxes_all)+
 ggarrange(co2_diff,ch4_diff,
           ncol=1,nrow=2,labels=c("A.","B."),font.label = list(face="plain",size=15), common.legend = TRUE, legend = "right")
 
-ggsave("./Fig_Output/SI_Diff_fluxes_All.jpg",width = 8, height=7, units="in",dpi=320)
+ggsave("C:/Users/13188/Desktop/Data_repository/Fig_Output/SI_Diff_fluxes_All.jpg",width = 8, height=7, units="in",dpi=320)
