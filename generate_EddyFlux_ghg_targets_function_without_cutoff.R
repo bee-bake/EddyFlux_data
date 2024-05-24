@@ -204,7 +204,6 @@ generate_EddyFlux_ghg_targets_function <- function(flux_current_data_file,
     ungroup()%>%
     drop_na(date)%>% # drop when we have timezone issues with daylight savings
     mutate(datetime=(paste0(date," ","00:00:00")))%>%
-    #drop_na(datetime) %>%
     mutate(Reservoir='fcre')%>% # change the name to the the reservoir code for FLARE
     mutate(Depth_m = NA)%>%
     select(-date)%>%

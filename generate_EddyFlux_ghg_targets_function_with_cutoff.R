@@ -209,16 +209,14 @@ generate_EddyFlux_ghg_targets_function <- function(flux_current_data_file,
     dplyr::rename(co2flux_umolm2s_mean = CO2_med_flux,
                   ch4flux_umolm2s_mean = ch4_med_flux) %>% # rename columns
     group_by(date)%>% # average if there are more than one sample taken during that day
-    summarise(frequency = n()) %>%#count hh values and filter >=20 only
-    filter(frequency >= 20) %>%
+    summarise(frequency = n()) %>%#count hh values and filter >=24 only
+    filter(frequency >= 24) %>%
     ungroup()
 
 targets_df <- targets_df %>%
     filter(date %in% flux_count$date) %>%
-    #ungroup()%>%
     drop_na(date)%>% # drop when we have timezone issues with daylight savings
     mutate(datetime=(paste0(date," ","00:00:00")))%>%
-    #drop_na(datetime) %>%
     mutate(Reservoir='fcre')%>% # change the name to the the reservoir code for FLARE
     mutate(Depth_m = NA)%>%
     select(-date)%>%

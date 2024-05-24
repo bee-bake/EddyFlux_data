@@ -594,7 +594,7 @@ ggplot(aes(x = x, y = frequency), data = cut_off_count) +
 
 ```{r, warning=FALSE}
 #Import the data filtered for wind directions only
-gap_unfilled <- read_csv("Eddy_fcr_footprint_full.csv")
+gap_unfilled <- read_csv("C:/Users/13188/Desktop/Data_repository/Eddy_fcr_footprint_full.csv")
 
 #Split date and time
 #gap_unfilled$Date <- as.Date(gap_filled$DateTime)
@@ -629,7 +629,7 @@ p2 <- ggplot(gap_unfilled_countCH4, aes(x = frequency)) +
 ```{r, warning=FALSE}
 library(patchwork)
 #Import the gap filled dataset but use columns that are not gap filled
-gap_filled <- read_csv("2024-05-10_EC_processed_withBDScript.csv")
+gap_filled <- read_csv("C:/Users/13188/Desktop/Data_repository/2024-05-10_EC_processed_withBDScript.csv")
 
 #Split date and time
 gap_filled$Date <- as.Date(gap_filled$DateTime)
@@ -688,7 +688,7 @@ for (i in 2:length(complete_hh_series$frequency)) {
 ggplot(complete_hh_series, aes(x = frequency, y = cum_proportion)) +
   ylab("Proportion")+
   xlab("Half hours")+ ggtitle("Data availability after footprint filter for CO2 with cut-off at 30") +
-  geom_line() + geom_vline(xintercept=30, col = "red", lty = 2, lwd = 0.7) +
+  geom_line() + geom_vline(xintercept=24, col = "red", lty = 2, lwd = 0.7) +
   geom_hline(yintercept=0.92, col = "red", lty = 2, lwd = 0.7)
 
 ```
@@ -718,7 +718,7 @@ for (i in 2:length(complete_hh_series$frequency)) {
 ggplot(complete_hh_series, aes(x = frequency, y = cum_proportion)) +
   ylab("Proportion")+
   xlab("Half hours")+ ggtitle("Data availability after footprint and u star filter for CO2 with cut-off at 30") +
-  geom_line() + geom_vline(xintercept=30, col = "red", lty = 2, lwd = 0.7) +
+  geom_line() + geom_vline(xintercept=24, col = "red", lty = 2, lwd = 0.7) +
   geom_hline(yintercept=0.96, col = "red", lty = 2, lwd = 0.7)
 
 ```
