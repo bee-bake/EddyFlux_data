@@ -125,4 +125,4 @@ fcr_ice_data <- target_IceCover_binary(current_file = current_files[2], historic
 
 combined_ice_data <- dplyr::bind_rows(bvr_ice_data, fcr_ice_data)
 
-write.csv(combined_ice_data, "C:/Users/13188/Desktop/Data_repository/DataNotYetUploadedToEDI/Ice_binary/ice_L1.csv", row.names = FALSE)
+write.csv(combined_ice_data, "C:/Users/13188/Desktop/Data_repository/ice_L1.csv", row.names = FALSE)
