@@ -113,8 +113,14 @@ target_IceCover_binary <- function(current_file, historic_file){
   return(final_df)
 }
 
+#Use EDI link until 2023 for catwalk data and L1 link for 2024 and combine them
+catwalk_data <- read_csv("C:/Users/13188/Desktop/Data_repository/FCR_Catwalk_2020May_2024April.csv") |> 
+  mutate(Reservoir = "FCR",
+         Site = 50)
+write.csv(catwalk_data, "C:/Users/13188/Desktop/Data_repository/FCR_Catwalk_forIce.csv")
+
 current_files <- c("https://raw.githubusercontent.com/FLARE-forecast/BVRE-data/bvre-platform-data-qaqc/bvre-waterquality_L1.csv",
-               "https://raw.githubusercontent.com/FLARE-forecast/FCRE-data/fcre-catwalk-data-qaqc/fcre-waterquality_L1.csv")
+                   "C:/Users/13188/Desktop/Data_repository/FCR_Catwalk_forIce.csv")
 
 historic_files <- c("https://pasta.lternet.edu/package/data/eml/edi/456/5/ebfaad16975326a7b874a21beb50c151",
                     "https://pasta.lternet.edu/package/data/eml/edi/456/5/ebfaad16975326a7b874a21beb50c151")
