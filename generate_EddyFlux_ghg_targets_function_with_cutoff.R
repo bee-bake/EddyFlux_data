@@ -206,11 +206,11 @@ generate_EddyFlux_ghg_targets_function <- function(flux_current_data_file,
   flux_count <- eddy_fcr %>%
     filter(footprint_flag == 0)%>% # filter out so it is the smallest footprint
     select(date, CO2_med_flux, ch4_med_flux)%>%
-    dplyr::rename(co2flux_umolm2s_mean = CO2_med_flux,
-                  ch4flux_umolm2s_mean = ch4_med_flux) %>% # rename columns
-    group_by(date)%>% # average if there are more than one sample taken during that day
-    summarise(frequency = n()) %>%#count hh values and filter >=24 only
-    filter(frequency >= 24) %>%
+    pivot_longer(cols = starts_with(c("CO2", "ch4")), names_to = "variable", values_to = "mean")%>%
+    na.omit(mean) %>%
+    group_by(date, variable)%>%
+    summarise(non_na_count = sum(!is.na(mean))) %>% #count hh values and filter >=24 only
+    filter(non_na_count >= 24) %>%
     ungroup()
 
 targets_df <- targets_df %>%
