@@ -21,7 +21,7 @@ write.csv(targets_without_stable_mean, "C:/Users/13188/Desktop/Data_repository/t
 ##########################################################################
 #This part uses half hourly values with all QAQC and cut-off but without u* filtering
 #Use a predefined function to import the data
-source("generate_EddyFLux_ghg_targets_function_with_cutoff.R")
+source("generate_EddyFLux_ghg_targets_function_with_cutoff_Bibek.R")
 targets_with_stable_mean <- generate_EddyFlux_ghg_targets_function(
   
   flux_current_data_file <- "https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/EddyFlux_Processing/EddyPro_Cleaned_L1.csv",
@@ -31,7 +31,7 @@ targets_with_stable_mean <- generate_EddyFlux_ghg_targets_function(
 
 #Create a csv file and save it!
 write.csv(targets_with_stable_mean, "C:/Users/13188/Desktop/Data_repository/targets_with_stable_mean.csv")
-#Only about 37% of data retained to use for forecasting!
+#Only about 19% of data retained to use for forecasting!
 
 ################################################################################
 #What does the data availability after wind, u star and cut-off filter all applied look like?
@@ -155,13 +155,13 @@ targets_with_stable_mean_wider <- targets_with_stable_mean %>%
 p5 <- ggplot(targets_with_stable_mean_wider, aes(x = as.Date(datetime)))+
   geom_point(aes(y = co2flux_umolm2s_mean), colour = "blue", alpha=0.5) +
   scale_x_date(date_breaks = "6 months", date_labels = "%Y-%m") +
-  ylab("CO2 daily mean") + xlab("") + ggtitle("No U star filtering but cut-off applied at 20") +
+  ylab("CO2 daily mean") + xlab("") + ggtitle("No U star filtering but cut-off applied at 24") +
   ylim(-20, 20)
 
 p6 <- ggplot(targets_with_stable_mean_wider, aes(x = as.Date(datetime)))+
   geom_point(aes(y = ch4flux_umolm2s_mean), colour = "red", alpha = 0.5) +
   scale_x_date(date_breaks = "6 months", date_labels = "%Y-%m") +
-  ylab("CH4 daily mean") + xlab("") + ggtitle("No U star filtering but cut-off applied at 20") +
+  ylab("CH4 daily mean") + xlab("") + ggtitle("No U star filtering but cut-off applied at 24") +
   ylim(-0.045, 0.052)
 
 #Plot all graphs

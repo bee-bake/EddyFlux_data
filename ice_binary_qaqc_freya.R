@@ -60,7 +60,7 @@ target_IceCover_binary <- function(current_file, historic_file){
                                length = rle_ice$lengths) |>  # how long is the run of this condition?
     dplyr::mutate(end_n = cumsum(length), # cumsum is the index of the end of each run
                   start_n = (end_n - length+1),# this the index of the start of the run
-                  datetime = lubridate::as_date(current_on_off$datetime[start_n])) |>  # relates this the date
+                  datetime = lubridate::as_datetime(current_on_off$datetime[start_n])) |>  # relates this the date
     dplyr::select(variable, datetime) |>
     dplyr::mutate(site_id = current_df$site_id[1],
                   observation = 1) |> # these are all where ice on/off is occuring
@@ -94,8 +94,8 @@ target_IceCover_binary <- function(current_file, historic_file){
                      last = max(datetime))
   
   # get all the days to fill in with 0
-  all_dates <- expand.grid(datetime = seq.Date(period$first,
-                                               period$last, by = 'day'),
+  all_dates <- expand.grid(datetime = seq(period$first,
+                                               period$last, by = "10 min"),
                            variable = c('IceOn', 'IceOff'),
                            site_id = current_df$site_id[1])
   
@@ -115,6 +115,7 @@ target_IceCover_binary <- function(current_file, historic_file){
 
 #Use EDI link until 2023 for catwalk data and L1 link for 2024 and combine them
 catwalk_data <- read_csv("C:/Users/13188/Desktop/Data_repository/FCR_Catwalk_2020May_2024April.csv") |> 
+  filter(DateTime > "2022-12-31 00:00:00") |> 
   mutate(Reservoir = "FCR",
          Site = 50)
 write.csv(catwalk_data, "C:/Users/13188/Desktop/Data_repository/FCR_Catwalk_forIce.csv")
@@ -129,6 +130,14 @@ historic_files <- c("https://pasta.lternet.edu/package/data/eml/edi/456/5/ebfaad
 bvr_ice_data <- target_IceCover_binary(current_file = current_files[1], historic_file = historic_files[1])
 fcr_ice_data <- target_IceCover_binary(current_file = current_files[2], historic_file = historic_files[2])
 
-combined_ice_data <- dplyr::bind_rows(bvr_ice_data, fcr_ice_data)
+combined_ice_data <- dplyr::bind_rows(bvr_ice_data, fcr_ice_data) |> 
+  filter(site_id == "fcre" & datetime > "2020-05-01" & observation == 1) |> 
+  group_by(datetime) |> 
+  mutate(row = row_number()) |>
+  pivot_wider(names_from = variable, values_from = observation)
+#Replace NAs with 0
+#There's a glitch on row number 36 and 37 that have been removed from hereafter!!!
+combined_ice_data[is.na(combined_ice_data)] <- 0
+combined_ice_data <- combined_ice_data[-c(36, 37), ]
 
 write.csv(combined_ice_data, "C:/Users/13188/Desktop/Data_repository/ice_L1.csv", row.names = FALSE)
