@@ -1,0 +1,547 @@
+---
+title: "Five years of eddy covariance data and structural equation modeling reveal an important role of water temperature and wind in controlling methane fluxes from a small reservoir"
+
+author: "Bibek Kandel"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+#Load libraries
+pacman::p_load(DiagrammeRsvg, rsvg, mvnormalTest, lavaan, lavaanPlot, dplyr, readr, tidyr, lubridate, ggcorrplot, purrr, broom, leaps, piecewiseSEM, gridExtra, htmltools, zoo)
+
+```
+
+# Methods
+
+### Site map
+
+Falling Creek Reservoir (FCR) is a small eutrophic reservoir located in Vinton, Virginia, USA 
+(37.30°N, 79.84°W). FCR has a surface area of 0.12 km2, maximum depth of 9.3 m, a mean 
+depth of 4 m, and a catchment to surface area ratio of 29:1 (Gerling et al., 2014). FCR is a 
+drinking water source located in a primarily deciduous forested catchment and is owned by the 
+Western Virginia Water Authority (WVWA). Thermal stratification in FCR usually develops 
+between April and October of each year. FCR is typically dimictic with variable ice cover 
+between December and March.
+
+![](C:/Users/13188/Desktop/methane_paper/Proposal/FCR_map_wEC.png)
+
+
+### Data collection
+
+**Eddy Covariance (EC) measurements** 
+
+The EC instrumentation included an ultrasonic anemometer to measure 3D wind speed and 
+direction (CSAT3, Campbell Scientific Inc., Logan, Utah, USA), an open-path infrared gas 
+analyzer for measuring methane concentration (LI-7700, LiCor Biosciences, Lincoln, Nebraska, 
+USA), and an enclosed path infrared gas analyzer for measuring carbon dioxide and water vapor 
+concentrations (LI-7200, LiCor Biosciences, Lincoln, Nebraska, USA). The data streams 
+(anemometer, methane, carbon dioxide, water vapor) were recorded at 10-Hz using a data logger 
+that included a temperature sensor and pressure transducer (LI-7550, LiCor Biosciences, 
+Lincoln, Nebraska, USA). The open-path methane sensor was manually cleaned approximately 
+weekly from April through October and approximately monthly from November to April. The 
+carbon dioxide sensor was cleaned approximately every three months or when the sensor 
+strength dropped below 95%. The EC data measured at 10 Hz was both detrended and despiked over 30-min intervals using the EddyPro v.7.0.6 software (LiCor Biosciences, Lincoln, Nebraska, USA; LiCor Biosciences 2019). The three wind vectors from sonic anemometer measurements were rotated into the mean 
+wind direction and tilt corrected, setting the mean vertical wind to zero. Time lag due to sensor 
+separation between the sonic and LI-7700 was calculated according to Sahlée et al. (2008). The 
+CH4 density measurements from LI-7700 were corrected for temperature and humidity changes 
+according to Webb et al. (1980) and additional corrections due to spectroscopic effects according 
+to McDermitt et al. (2011). 
+
+
+**Other water quality variable measurements**
+
+A research grade meteorological station was also deployed at FCR that collects one-minute 
+resolution precipitation, photosynthetically activate radiation (PAR), incoming shortwave radiation, 
+and wind speed data (Carey et al., 2021d). Lastly, throughout the 5-year period, weekly to 
+monthly samples of DO, algal blooms and other water quality parameters were collected 
+and analyzed as potential drivers of methane fluxes. Additionally, thermistors were deployed at the 
+deepest site at FCR that collect ten-minute resolution data at the surface and every meter depth at 
+FCR (Carey et al., 2021b). Moreover, thermal profiles and DO measurements were collected from weekly to
+monthly timescales using a high-resolution conductivity, temperature, and depth (CTD) sensor (Carey et al., 2021c). 
+
+
+
+
+**Schematic of methane flux pathways**
+
+
+![](C:/Users/13188/Desktop/methane_paper/Proposal/stream_team_schematic.png)
+
+### Data analysis
+
+- EC fluxes
+
+Following processing in EddyPro software, we excluded some redundant measurements and calculations in R using eddy-flux_qaqc_2020_2024.R. We included the quality control flags for each calculated flux as assigned by EddyPro software such that: 0 = best quality fluxes; 1 = fluxes suitable for general analysis; and 2 = user should remove fluxes following Mauder and Foken (2006). We also added our flags in this column: 3 = flux not recorded; and 4 = instrument malfunction. Flags 3 and 4 were not added by the EddyPro software, but applied in the eddy-flux_qaqc_2020_2024.R script. We added a flag 3 if no observation was recorded while the system was working. Flag 4 was applied when there was an instrument malfunction. This included removing carbon dioxide and water vapor fluxes when the flow rate from the pump was too low (below 10) or too high (above 20). We also removed extremely high or extremely low fluxes for carbon dioxide, water vapor, methane, sensible heat flux, and latent heat flux defined as carbon dioxide fluxes less than -300 or greater than 300, water vapor fluxes less than -40 or greater than 40, methane fluxes less than -0.25 or greater than 1, sensible heat fluxes less than -200 or greater than 200, and latent heat fluxes less than -500 or greater than 500.
+
+
+Following 30-minute flux conversions in Eddy Pro and additional post-processing as described above, the eddy-flux_post_processing.Rmd script can also be used for additional data processing using the R package REddyProc (Wutzler et al. 2018) to conduct gap-filling of missing data. First, we used the meteorological data (Carey, Breef-Pilz, and Delany 2024) measured at the dam (located ~45 m from the EC sensors) to gap-fill any missing wind speed, direction, temperature, and relative humidity from the EC data. Second, we calculated the vapor pressure deficit from measured air temperature and relative humidity and calculated net radiation balance from upwelling and downwelling shortwave and longwave radiation. Using REddyProc, we then gap-filled any remaining gaps in the air temperature, shortwave radiation, total PAR, net radiation, sensible heat flux, and latent heat flux using the marginal distribution sampling (MDS) following Wutzler et al. (2018). We then used REddyProc to estimate the ustar threshold distribution and removed any fluxes when the ustar value was too low (Wutzler et al. 2018). Finally, we gap-filled any missing fluxes using the estimated ustar distributions using the MDS method (Wutzler et al. 2018). The gap-filled half-hourly data were then aggregated to estimate daily methane fluxes and were further included in our analysis.  
+
+
+- Discrete dissolved methane measurements
+
+The mean discrete dissolved methane concentrations were calculated by averaging the two replicate measurements collected at the site. Then, the volume-weighted methane (VWM) concentrations for each depth were estimated by multiplying the mean methane concentrations with the volume of each depth (Hounshell et al. 2022). The final VWM stock in each depth was expressed in the units of mol.
+
+
+- Algal bloom measurements
+
+The mean discrete algal bloom concentration was estimated from continuous measurements across vertical profile by averaging the measurements at each depth (depth of interest +/- 0.2m).   
+
+
+- CTD measurements
+
+The saturated dissolved oxygen (DO) concentrations at 1.6m, 5m, and 9m depth were measured using EXO sensor deployed at the catwalk. Also, saturated DO concentrations and temperature values for 0.1m and 3.8m were estimated from continuous CTD measurements across vertical profile by averaging the measurements at each depth (depth of interest +/- 0.2m).
+
+
+- Temperature depth profile
+
+The temperature profiles at the depths of interest were measured using thermistors deployed at the 
+deepest site at FCR that collect ten-minute resolution data. These high-frequency data were then averaged to estimate daily temperature values. Moreover, the temperature at 4m depth was used as a representative temperature for 3.8m depth.
+
+- Thermocline depth and schmidt stability
+
+The rlakeAnalyzer package in R was used to estimate the thermocline depth and schmidt stability from high-frequency temperature profile at the deepest site of the reservoir.
+
+
+# Results
+
+```{r}
+#Load up the data with methane flux and associated driver variables
+#This will pull the methane flux daily data which only pass minimum half hourly test of >=20
+comp_data <- read_csv("https://raw.github.com/bee-bake/EddyFlux_data/main/comp_data.csv") |> 
+  rename(Date = "date")
+  
+ 
+#Import ghg from EDI and Filter the date and depth needed and convert to fluxes
+ghg_FCR <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/551/9/98f19e7acae8bea7d127c463b1bb5fbc") %>% 
+  mutate(DateTime = as.POSIXct(strptime(DateTime, "%Y-%m-%d %H:%M", tz="EST"))) %>% 
+  filter(Reservoir == "FCR" & Site == 50) %>% 
+  filter(DateTime >= "2020-01-01") %>% 
+  mutate(DateTime = round_date(DateTime, "30 mins")) 
+
+#create a hypsometric table with depth and volume (Hounshell et al. 2022)
+summarized_volumes <- data.frame(
+  Depth_m = c("0.1", "1.6", "3.8", "5", "6.2", "8", "9"),
+  Volume_L = c(125594861, 101405139, 59900000, 40200000, 13900000, 14100000, 1950000)) #adapted from SI (Hounshell et al. 2020) & bathy_FCR
+
+#PREPARING DISSOLVED GHG DATASET
+#Calculate mean methane from two replicates and filter data from April-November
+## Pivot wider
+ghg_fluxes <- ghg_FCR %>% 
+  select(DateTime,Rep,CH4_umolL,CO2_umolL, Depth_m) %>% 
+  pivot_wider(names_from = Rep, values_from = c('CH4_umolL','CO2_umolL'), values_fn = mean)%>%
+  mutate(mean_CO2 = (CO2_umolL_1 + CO2_umolL_2)/2,
+         mean_CH4 = (CH4_umolL_1 + CH4_umolL_2)/2)
+
+
+ghg_fluxes_summer <- ghg_fluxes %>%
+  filter(DateTime >= "2020-04-01 00:00:00" & DateTime < "2024-11-30 00:00:00") %>%
+  select(DateTime, Depth_m, mean_CH4)
+
+# Replace zeros with NA
+ghg_fluxes_summer[ghg_fluxes_summer == 0] <- NA
+
+####ESTIMATE VOLUME WEIGHTED METHANE
+#dissolved methane 
+sub_ghg_fluxes <- ghg_fluxes_summer |> 
+  mutate(Date=as.Date(DateTime)) |> 
+  select(Date, mean_CH4, Depth_m)
+
+
+#merge the summarized volumes with dissolved methane data
+Vol_Weighted_CH4 <- merge(sub_ghg_fluxes, summarized_volumes, by = "Depth_m", all.x = TRUE) |> na.omit()
+
+#calculate volume weighted dissolved methane (units changed to mol from umol)
+Vol_Weighted_CH4$VW_methane <- (Vol_Weighted_CH4$mean_CH4*summarized_volumes$Volume_L)/1000000
+
+
+#Pivot wider and join with EddyFlux data
+selected_CH4 <- Vol_Weighted_CH4 |> 
+  select(Date, Depth_m, VW_methane) |> 
+  pivot_wider(names_from = "Depth_m", values_from = "VW_methane") |> 
+  rename(CH4_surface = "0.1",
+         CH4_1.6m = "1.6",
+         CH4_3.8m = "3.8",
+         CH4_5m = "5",
+         CH4_6.2m = "6.2",
+         CH4_8m = "8",
+         CH4_9m = "9")
+
+
+#join with comp_data
+full_Data <- merge(selected_CH4, comp_data, by="Date", all.y = TRUE)
+
+```
+
+Let's also load in DO saturated from CTD data. Here, we aggregate DO at continuous depth data into DO at discrete depths of our interest by averaging the saturated DO across +/- 0.2m.
+
+```{r}
+#Load the dataset
+#Load in CTD for surface measurements
+CTD_all <- read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/1113/9/bbd126d40b44abaeeb0d734009da9ae4") 
+
+#DATA WITHOUT INTERPOLATION
+#Considering 0.1m DO as a mean of DO around +/-0.2 m
+#Calculate discrete DO at each depth of interest
+CTD_profile <- CTD_all %>%
+  filter(Reservoir == "FCR" & Site == 50 & DateTime >= "2020-04-01 00:00:00" & DateTime < "2024-11-30 00:00:00") %>%
+  mutate(Date = as.Date(DateTime),
+         Month = month(Date)) %>%
+  filter(Month >= 4 & Month <= 11) %>%
+  select(Date, DOsat_percent, Depth_m) %>%
+  filter(Depth_m >= 0 & Depth_m <= 0.3 |
+           Depth_m >= 1.4 & Depth_m <= 1.8 |
+           Depth_m >= 3.6 & Depth_m <= 4.0 |
+           Depth_m >= 4.8 & Depth_m <= 5.2 |
+           Depth_m >= 6.0 & Depth_m <= 6.4 |
+           Depth_m >= 7.8 & Depth_m <= 8.2 |
+           Depth_m >= 8.8 & Depth_m <= 9.2) %>%
+  na.omit()
+
+#Rounding of +/- 0.2m depths to the depths we need
+CTD_profile$full_depth <- ifelse(CTD_profile$Depth_m >= 0.0 & CTD_profile$Depth_m <= 0.3, 0.1,
+                                 ifelse(CTD_profile$Depth_m >= 1.4 & CTD_profile$Depth_m <= 1.8, 1.6,
+                                        ifelse(CTD_profile$Depth_m >= 3.6 & CTD_profile$Depth_m <= 4.0, 3.8,
+                                               ifelse(CTD_profile$Depth_m >= 4.8 & CTD_profile$Depth_m <= 5.2, 5.0,
+                                                      ifelse(CTD_profile$Depth_m >= 6.0 & CTD_profile$Depth_m <= 6.4, 6.2,
+                                                             ifelse(CTD_profile$Depth_m >= 7.8 & CTD_profile$Depth_m <= 8.2, 8.0,
+                                                                    ifelse(CTD_profile$Depth_m >= 8.8 & CTD_profile$Depth_m <= 9.2, 9.0, NA)))))))
+
+
+#create a file containing datetime, depth and dissolved oxygen
+DO_sat <- CTD_profile %>%
+  select(Date, full_depth, DOsat_percent) %>%
+  group_by(Date, full_depth) %>%
+  summarise(mean_DOsat = mean(DOsat_percent))%>%
+  rename(Depth_m = "full_depth")
+
+#Select the columns needed
+ready_data <- full_Data |> 
+select(Date, daily_CH4, temp_surface, DOsat_5m, DOsat_9m, sch_stab, WindSpeed_Average_m_s, CH4_3.8m, thermo.depth, CH4_1.6m, CH4_surface, CH4_5m, CH4_9m, temp_9m, temp_5m, temp_4m, DOsat_surface, temp_1.6m, mean_Chla, mean_fDOM)
+
+
+#Join CTD DOsat and stepwise datasets
+#Filter only 0.1 depths 
+DO_sat_surface <- DO_sat |> 
+  filter(Depth_m == 0.1 | Depth_m == 3.8) |> 
+  pivot_wider(names_from = Depth_m, values_from = mean_DOsat) |>
+  rename(DOsat_0.1m="0.1",
+         DOsat_3.8m = "3.8")
+
+#Merge DO and ready_data
+epi_hyp_data <- merge(DO_sat_surface, ready_data, by = "Date", all.y = TRUE) |> 
+  rename(DOsat_1.6m = "DOsat_surface",
+         Wind = "WindSpeed_Average_m_s"
+         )
+
+```
+
+
+We interpolate dissolved methane data at each depths separately in the following chunk.
+
+```{r}
+# #interpolation
+# #reorder
+Vol_Weighted_CH4_ordered <- Vol_Weighted_CH4[order(Vol_Weighted_CH4$Date, Vol_Weighted_CH4$Depth_m), ]
+
+# #dissolved methane
+sub_ghg_fluxes <- Vol_Weighted_CH4_ordered %>%
+  select(Date, VW_methane, Depth_m)
+
+# # Generate a sequence of daily dates
+days <- seq(min(sub_ghg_fluxes$Date), max(sub_ghg_fluxes$Date), by = "day")
+layers <- c(0.1,1.6,3.8,5,6.2,8,9)
+data <- expand.grid(Date = days, Depth_m = layers)  # Create a full grid
+#
+# #merge
+CH4_int <- merge(data, sub_ghg_fluxes, by=c("Date","Depth_m"), all.x = TRUE)
+#
+GHG_int_final <- CH4_int %>%
+  group_by(Depth_m) %>%  # Process each layer separately
+  arrange(Date) %>%
+  mutate(CH4_int = na.approx(VW_methane, Date, rule = 2)) %>%  # Linear interpolation
+  ungroup() %>%
+  select(-VW_methane)
+
+#Pivot wider and join with EddyFlux data
+selected_CH4_int <- GHG_int_final |> 
+  select(Date, Depth_m, CH4_int) |> 
+  pivot_wider(names_from = "Depth_m", values_from = "CH4_int") |> 
+  rename(iCH4_surface = "0.1",
+         iCH4_1.6m = "1.6",
+         iCH4_3.8m = "3.8",
+         iCH4_5m = "5",
+         iCH4_6.2m = "6.2",
+         iCH4_8m = "8",
+         iCH4_9m = "9")
+
+#join with full_data
+epi_hyp_int <- merge(selected_CH4_int, epi_hyp_data, by="Date", all.y = TRUE)
+
+```
+
+#########################################################
+
+### Structural Equation Modeling
+
+#Resources:
+
+#https://bookdown.org/luguben/EFA_in_R/determining-the-number-of-factors-1.html
+
+#https://cran.r-project.org/web/packages/lavaanPlot/vignettes/Intro_to_lavaanPlot.html
+
+#https://people.ucsc.edu/~zurbrigg/psy214b/09SEM8a.pdf
+
+
+- First, we explored the relationships among various water quality variables and methane fluxes using a correlation plot. We did not include the independent variables strongly correlated with each other in the models to remove the effects of multicollinearity.
+
+
+```{r}
+#correlations
+cor_data <- epi_hyp_int |> 
+  select(-Date)
+
+cor_matrix <- cor(cor_data, use="pairwise.complete.obs")
+ggcorrplot(cor_matrix,
+           lab = TRUE, lab_size = 2, tl.cex = 8)
+
+```
+
+The correlogram showed that the daily methane flux was most negatively correlated with dissolved oxygen saturation at 5m depth and 9m depth among the variables used. Also, daily methane flux was most positively correlated with volume-weighted dissolved methane concentration at 5m, thermocline depth and blue-green algae concentrations. #We then used short-listed variables from correlation analysis to define path analysis models and tested them against the weekly data. 
+
+The model assumptions about univariate and multivariate normality was tested using shapiro-Wilk test and Mardia multivariate normality test.
+
+
+```{r}
+#Assessing assumptions about the distribution of measured variables
+#Select only the columns we want to model
+corr_data <- epi_hyp_int |> 
+select(daily_CH4, temp_surface, DOsat_5m, DOsat_9m, sch_stab, Wind, iCH4_3.8m, thermo.depth, iCH4_1.6m, iCH4_surface, iCH4_5m, iCH4_9m, temp_9m, temp_5m, temp_4m, DOsat_1.6m, temp_1.6m, mean_Chla, mean_fDOM, DOsat_3.8m, DOsat_1.6m, daily_CH4)
+
+#Test multivariate normality
+mvnout <- mardia(corr_data)
+mvnout$uv.shapiro #extract shapiro-Wilk univariate normality test statistics
+mvnout$mv.test #Mardia multivariate normality test
+
+```
+
+
+- Results from both the univariate and multivariate tests indicate that the most measures do come from multivariate normal distributions.
+
+```{r}
+#NORMALIZE THE DATASET
+data_scaled <- scale(corr_data)
+
+```
+
+
+### Individual path models and drivers selection
+
+The piecewise SEM produces no valid global covariance matrix unlike latent variable based SEM, alternative goodness-of-fit tests are necessary. The typical approach uses Shipley's test of directed separation. This procedure tests the assumption that all variables are conditionally independent. In simplest terms, conditional independence implies that there are no missing relationships among unconnected variables (Shipley 2000a).
+
+To compare standardized regression coefficients, we re-fit the model in lavaan package and assess the model fit using standardized test statistics (the ratio of chi-squared value to the degrees of freedom greater than 3), root mean squared error approximation (RMSEA) and standard root mean residual (SRMR) less than 0.1 and comparative fit index (CFI) grater than 0.9. 
+
+
+The regression coefficients represent the strength of the relationship between latent constructs/ independent variables and dependent variable(s). Since, the latent constructs are correlated, the regression coefficients are partial coefficients, interpreted as the amount of change in dependent/ exogenous variable given a unit change in independent/ latent variable, controlling for the effects of other variables in the model. 
+
+
+- Note to self: There is a difference between Betas (the standardized regression coefficients) for B's (the unstandardized coefficients).  Bs are in the original units of the variables. Because of this Bs can be very small or very large depending on the units of you predictor and criterion.  However, Betas are in standard deviation units (much like Pearson's r) and are interpreted like this:  for a 1 SD change in your predictor, there is a Beta SD change in your criterion, holding other variables constant (because it's a partial regression coefficient).  if you are making predictions from a regression model you typically are using the Bs, not the Betas, because to make predictions from Betas your predictor variables would need to be converted to Z scores first (and the predicted criterion value would be in Z units too).  I recommend reading Cohen, Cohen, West, & Aiken for a good review of this material.  Nonetheless, it does appear that Betas (the standardized coefficients) can be greater than 1.0; however, this is likely only to happen when there is high multicollinearity among your predictors (ie, the predictors are too highly correlated).  See Karl G Jöreskog (1999) How Large Can a Standardized Coefficient be?  Thus, if you get Betas>1 you should generally try to reduce your multicollinearity (check Tolerance values to make sure they are >0.10). 
+
+
+
+**Sub-questions:**
+
+- What drives the variability of bottom water methane accumulations in the reservoirs? 
+
+
+Let's first use the knowledge we have about how our system works to inform the hypothesized model structure. We think that the CH4 accumulation in the hypolimnion of the reservoir is a function of saturated dissolved oxygen concentration (adjusted for temperature) and temperature. Also, during strong stratification periods (as indicated by schmidt stability), the upward diffusion of the dissolved methane is slowed down which facilitates methane accumulation at the bottom.
+
+
+Let's translate this concept into a set of equations that can be modeled as path diagrams and ultimately structural equation model.
+
+
+![](C:/Users/13188/Desktop/methane_paper/Proposal/hyp_model.png)
+
+![](C:/Users/13188/Desktop/methane_paper/Proposal/epi_model.png)
+
+![](C:/Users/13188/Desktop/methane_paper/Proposal/flux_model.png)
+
+
+```{r}
+#sem
+data_flux <- epi_hyp_int |> 
+  select(DOsat_9m, temp_1.6m, temp_9m, iCH4_5m, iCH4_1.6m, DOsat_5m, sch_stab, DOsat_1.6m, daily_CH4, Wind, iCH4_9m, mean_Chla, mean_fDOM, iCH4_3.8m, temp_5m) |> na.omit()
+
+#fit the path models
+model_flux <- psem(
+  lm(sch_stab ~ temp_1.6m, data_flux),
+  lm(iCH4_9m ~ DOsat_9m + sch_stab, data_flux),
+  lm(iCH4_5m ~ iCH4_9m + DOsat_5m + sch_stab, data_flux),
+  lm(iCH4_1.6m ~ DOsat_1.6m + temp_1.6m + sch_stab + iCH4_5m + mean_fDOM, data_flux),
+  lm(daily_CH4 ~ Wind + iCH4_1.6m + iCH4_9m + temp_1.6m + mean_Chla, data_flux)
+
+)
+
+summary(model_flux)
+
+
+####MODEL TESTING IN LAVAAN PACKAGE######
+#scale the dataset
+data_flux_scaled <- scale(data_flux)
+
+model_flux <- '
+  sch_stab ~ temp_1.6m
+  iCH4_9m ~ DOsat_9m + sch_stab
+  iCH4_5m ~ iCH4_9m + DOsat_5m + sch_stab
+  iCH4_1.6m ~ DOsat_1.6m + temp_1.6m + sch_stab + iCH4_5m + mean_fDOM
+  daily_CH4 ~ Wind + iCH4_1.6m + iCH4_9m + temp_1.6m + mean_Chla
+  
+'
+
+fit.mod <- sem(model_flux, data = data_flux_scaled, std.lv = TRUE, estimator = "MLM")
+#MODEL FIT (Ideally non-significant p-value OR the ratio of chisq.scaled:df.scaled less than 3)
+fitMeasures(fit.mod, c("chisq.scaled", "df.scaled", "pvalue.scaled"))
+#Check RMSEA to estimate the discrepancy between the model-based and observed correlation matrices which takes into account both chi-squared value and model parsimony.
+#We want RMSEA <= 0.1
+fitMeasures(fit.mod, c("rmsea.scaled", "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "rmsea.pvalue.scaled"))
+#Check CFI and SRMR
+#We want CFI >= 0.9 and SRMR <= 0.08
+fitMeasures(fit.mod, c("cfi.scaled", "srmr"))
+
+#visualize the path diagrams
+lavaanPlot(model = fit.mod, , graph_options = list(rankdir = "BT"), node_options=list(shape="box", fontname="Helvetica"), edge_options=list(color="grey"), coefs = TRUE, stand = TRUE, stars = c("regress", "latent"), digits=3, sig = TRUE)
+
+
+```
+
+```{r}
+#Alternate model with the proposition that oxic conditions at depth 1.6m do not lead to the production of methane even if there's a lot of organic matter. Instead, when that organic matter sinks to the anoxic/hypoxic region at or below depth 3.8m, active methane production is observed. Hence, methane at 5m depth has positive association with organic matter and methane at top waters is determined by methane at metalimnetic anoxic regions. 
+
+#sem
+data_flux <- epi_hyp_int |> 
+  select(DOsat_9m, temp_1.6m, temp_9m, iCH4_5m, iCH4_1.6m, DOsat_5m, sch_stab, DOsat_1.6m, daily_CH4, Wind, iCH4_9m, mean_Chla, mean_fDOM, iCH4_3.8m, temp_5m) |> na.omit()
+
+#fit the path models
+model_flux <- psem(
+  lm(sch_stab ~ temp_1.6m, data_flux),
+  lm(iCH4_9m ~ DOsat_9m + sch_stab, data_flux),
+  lm(iCH4_5m ~ iCH4_9m + DOsat_5m + sch_stab + mean_fDOM, data_flux),
+  lm(iCH4_1.6m ~ DOsat_1.6m + temp_1.6m + sch_stab + iCH4_5m + DOsat_5m + iCH4_3.8m, data_flux),
+  lm(daily_CH4 ~ Wind + iCH4_1.6m + iCH4_9m + temp_1.6m + mean_Chla + iCH4_3.8m, data_flux)
+
+)
+
+summary(model_flux)
+
+
+####MODEL TESTING IN LAVAAN PACKAGE######
+#scale the dataset
+data_flux_scaled <- scale(data_flux)
+
+model_flux <- '
+  sch_stab ~ temp_1.6m
+  iCH4_9m ~ DOsat_9m + sch_stab
+  iCH4_5m ~ iCH4_9m + DOsat_5m + sch_stab + mean_fDOM
+  iCH4_1.6m ~ DOsat_1.6m + temp_1.6m + sch_stab + iCH4_5m + DOsat_5m + iCH4_3.8m
+  daily_CH4 ~ Wind + iCH4_1.6m + iCH4_9m + temp_1.6m + mean_Chla + iCH4_3.8m
+  
+'
+
+fit.mod <- sem(model_flux, data = data_flux_scaled, std.lv = TRUE, estimator = "MLM")
+#MODEL FIT (Ideally non-significant p-value OR the ratio of chisq.scaled:df.scaled less than 3)
+fitMeasures(fit.mod, c("chisq.scaled", "df.scaled", "pvalue.scaled"))
+#Check RMSEA to estimate the discrepancy between the model-based and observed correlation matrices which takes into account both chi-squared value and model parsimony.
+#We want RMSEA <= 0.1
+fitMeasures(fit.mod, c("rmsea.scaled", "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "rmsea.pvalue.scaled"))
+#Check CFI and SRMR
+#We want CFI >= 0.9 and SRMR <= 0.08
+fitMeasures(fit.mod, c("cfi.scaled", "srmr"))
+
+#visualize the path diagrams
+lavaanPlot(model = fit.mod, , graph_options = list(rankdir = "BT"), node_options=list(shape="box", fontname="Helvetica"), edge_options=list(color="grey"), coefs = TRUE, stand = TRUE, stars = c("regress", "latent"), digits=3, sig = TRUE)
+
+
+```
+
+
+
+
+
+
+
+```{r}
+#If methane at 1.6m is not significantly associated with fluxes, how does metalimnetic methane stocks influence fluxes and what drives them?
+#sem
+data_flux <- epi_hyp_int |> 
+  select(DOsat_9m, temp_1.6m, temp_9m, iCH4_5m, iCH4_1.6m, DOsat_5m, sch_stab, DOsat_1.6m, daily_CH4, Wind, iCH4_9m, mean_Chla, mean_fDOM, iCH4_3.8m, temp_5m) |> na.omit()
+
+#fit the path models
+model_flux <- psem(
+  lm(sch_stab ~ temp_1.6m, data_flux),
+  lm(iCH4_9m ~ DOsat_9m + sch_stab, data_flux),
+  lm(iCH4_5m ~ iCH4_9m + DOsat_5m + sch_stab + mean_fDOM, data_flux),
+  lm(iCH4_3.8m ~ iCH4_9m + iCH4_5m, data_flux),
+  lm(iCH4_1.6m ~ DOsat_1.6m + temp_1.6m + sch_stab + iCH4_5m + DOsat_5m + iCH4_3.8m, data_flux),
+  lm(daily_CH4 ~ Wind + iCH4_1.6m + iCH4_9m + temp_1.6m + mean_Chla + iCH4_3.8m, data_flux)
+
+)
+
+summary(model_flux)
+
+
+####MODEL TESTING IN LAVAAN PACKAGE######
+#scale the dataset
+data_flux_scaled <- scale(data_flux)
+
+model_flux <- '
+  sch_stab ~ temp_1.6m
+  iCH4_9m ~ DOsat_9m + sch_stab
+  iCH4_5m ~ iCH4_9m + DOsat_5m + sch_stab + mean_fDOM
+  iCH4_3.8m ~ iCH4_9m + iCH4_5m
+  iCH4_1.6m ~ DOsat_1.6m + temp_1.6m + sch_stab + iCH4_5m + DOsat_5m + iCH4_3.8m
+  daily_CH4 ~ Wind + iCH4_1.6m + iCH4_9m + temp_1.6m + mean_Chla + iCH4_3.8m
+  
+'
+
+fit.mod <- sem(model_flux, data = data_flux_scaled, std.lv = TRUE, estimator = "MLM")
+#MODEL FIT (Ideally non-significant p-value OR the ratio of chisq.scaled:df.scaled less than 3)
+fitMeasures(fit.mod, c("chisq.scaled", "df.scaled", "pvalue.scaled"))
+#Check RMSEA to estimate the discrepancy between the model-based and observed correlation matrices which takes into account both chi-squared value and model parsimony.
+#We want RMSEA <= 0.1
+fitMeasures(fit.mod, c("rmsea.scaled", "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "rmsea.pvalue.scaled"))
+#Check CFI and SRMR
+#We want CFI >= 0.9 and SRMR <= 0.08
+fitMeasures(fit.mod, c("cfi.scaled", "srmr"))
+
+#visualize the path diagrams
+lavaanPlot(model = fit.mod, , graph_options = list(rankdir = "BT"), node_options=list(shape="box", fontname="Helvetica"), edge_options=list(color="grey"), coefs = TRUE, stand = TRUE, stars = c("regress", "latent"), digits=3, sig = TRUE)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
