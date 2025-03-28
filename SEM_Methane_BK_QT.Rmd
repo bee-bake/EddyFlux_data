@@ -463,15 +463,17 @@ Let's translate this concept into a set of equations that can be modeled as path
 
 ![](https://raw.github.com/bee-bake/EddyFlux_data/main/conceptual_diag/epilimnetic_model.png)
 
+![](https://raw.github.com/bee-bake/EddyFlux_data/main/conceptual_diag/flux_model_5m.png)
+
 ![](https://raw.github.com/bee-bake/EddyFlux_data/main/conceptual_diag/flux_model.png)
+
 ```{r}
 #select variables of interest
 data_flux <- epi_hyp_int |> 
   select(DOsat_9m, temp_1.6m, temp_9m, 
          iCH4_5m, iCH4_1.6m, DOsat_5m, 
          sch_stab, DOsat_1.6m, daily_CH4, 
-         Wind, iCH4_9m, mean_Chla, mean_fDOM, 
-         iCH4_3.8m, temp_5m, iCH4_surface) |> 
+         Wind, iCH4_9m, mean_Chla, mean_fDOM) |> 
   na.omit()
 
 ```
@@ -583,8 +585,8 @@ summary(model_flux)
 data_flux_scaled <- scale(data_flux)
 
 model_flux <- '
-  DOsat_1.6m ~  mean_Chla
-  iCH4_1.6m ~ DOsat_1.6m + mean_Chla + temp_1.6m
+  DOsat_1.6m ~  mean_Chla + iCH4_9m
+  iCH4_1.6m ~ DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m + iCH4_5m
   
 '
 
@@ -603,15 +605,50 @@ lavaanPlot(model = fit.mod, , graph_options = list(rankdir = "BT"), node_options
 
 ```
 
+```{r}
+#fit the path models
+model_flux <- psem(
+  lm(DOsat_1.6m ~  mean_Chla, data_flux),
+  lm(iCH4_1.6m ~ DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m, data_flux),
+  lm(daily_CH4 ~ Wind + iCH4_1.6m + temp_1.6m + mean_Chla + iCH4_5m + DOsat_1.6m, data_flux)
+
+)
+
+summary(model_flux)
+
+
+####MODEL TESTING IN LAVAAN PACKAGE######
+#scale the dataset
+data_flux_scaled <- scale(data_flux)
+
+model_flux <- '
+  DOsat_1.6m ~  mean_Chla
+  iCH4_1.6m ~ DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m 
+  daily_CH4 ~ Wind + iCH4_1.6m + temp_1.6m + mean_Chla + iCH4_5m + DOsat_1.6m
+'
+
+fit.mod <- sem(model_flux, data = data_flux_scaled, std.lv = TRUE, estimator = "MLM")
+#MODEL FIT (Ideally non-significant p-value OR the ratio of chisq.scaled:df.scaled less than 3)
+fitMeasures(fit.mod, c("chisq.scaled", "df.scaled", "pvalue.scaled"))
+#Check RMSEA to estimate the discrepancy between the model-based and observed correlation matrices which takes into account both chi-squared value and model parsimony.
+#We want RMSEA <= 0.1
+fitMeasures(fit.mod, c("rmsea.scaled", "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "rmsea.pvalue.scaled"))
+#Check CFI and SRMR
+#We want CFI >= 0.9 and SRMR <= 0.08
+fitMeasures(fit.mod, c("cfi.scaled", "srmr"))
+
+#visualize the path diagrams
+lavaanPlot(model = fit.mod, , graph_options = list(rankdir = "BT"), node_options=list(shape="box", fontname="Helvetica"), edge_options=list(color="grey"), coefs = TRUE, stand = TRUE, stars = c("regress", "latent"), digits=3, sig = TRUE)
+
+```
+
+#Alternative model where we think that the fluxes via ebullition pathway from the bottom (9m) of the reservoir is more important than the one from metalimnetic (5m) pathway.
 
 ```{r}
 #fit the path models
 model_flux <- psem(
-  lm(sch_stab ~ temp_1.6m, data_flux),
-  lm(DOsat_1.6m ~ mean_Chla, data_flux),
-  lm(iCH4_9m ~ DOsat_9m + sch_stab, data_flux),
-  lm(iCH4_5m ~ DOsat_5m + mean_fDOM + iCH4_9m, data_flux),
-  lm(iCH4_1.6m ~ DOsat_1.6m + iCH4_5m + sch_stab + DOsat_5m + mean_Chla + iCH4_9m, data_flux),
+  lm(DOsat_1.6m ~  mean_Chla, data_flux),
+  lm(iCH4_1.6m ~ DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m, data_flux),
   lm(daily_CH4 ~ Wind + iCH4_1.6m + temp_1.6m + mean_Chla + iCH4_9m + DOsat_1.6m, data_flux)
 
 )
@@ -624,11 +661,8 @@ summary(model_flux)
 data_flux_scaled <- scale(data_flux)
 
 model_flux <- '
-  sch_stab ~ temp_1.6m
-  DOsat_1.6m ~ mean_Chla 
-  iCH4_9m ~ DOsat_9m + sch_stab
-  iCH4_5m ~ DOsat_5m + mean_fDOM + iCH4_9m 
-  iCH4_1.6m ~ DOsat_1.6m + iCH4_5m + sch_stab + DOsat_5m + mean_Chla + iCH4_9m 
+  DOsat_1.6m ~  mean_Chla
+  iCH4_1.6m ~  DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m
   daily_CH4 ~ Wind + iCH4_1.6m + temp_1.6m + mean_Chla + iCH4_9m + DOsat_1.6m
 '
 
