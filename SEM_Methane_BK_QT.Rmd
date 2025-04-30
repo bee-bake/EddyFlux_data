@@ -470,7 +470,7 @@ Let's translate this concept into a set of equations that can be modeled as path
 ```{r}
 #select variables of interest
 data_flux <- epi_hyp_int |> 
-  select(DOsat_9m, temp_1.6m, temp_9m, 
+  select(DOsat_9m, temp_1.6m, temp_9m, temp_5m,
          iCH4_5m, iCH4_1.6m, DOsat_5m, 
          sch_stab, DOsat_1.6m, daily_CH4, 
          Wind, iCH4_9m, mean_Chla, mean_fDOM) |> 
@@ -497,7 +497,7 @@ summary(m1)
 model_flux <- psem(
   lm(sch_stab ~ temp_9m, data_flux),
   lm(DOsat_9m ~ sch_stab, data_flux),
-  lm(iCH4_9m ~ DOsat_9m + temp_9m, data_flux)
+  lm(iCH4_9m ~ DOsat_9m + temp_9m + sch_stab, data_flux)
 
 )
 
@@ -541,15 +541,18 @@ model_flux <- psem(
 
 summary(model_flux)
 
+m1 <- lm(iCH4_9m ~ sch_stab + mean_fDOM + DOsat_5m, data_flux)
+summary(m1)
+
 ####MODEL TESTING IN LAVAAN PACKAGE######
 #scale the dataset
 data_flux_scaled <- scale(data_flux)
 
 model_flux <- '
-  DOsat_5m ~  sch_stab
+  DOsat_5m ~  sch_stab + mean_fDOM
   iCH4_9m ~  DOsat_5m + sch_stab
   iCH4_5m ~ iCH4_9m + DOsat_5m + mean_fDOM
-  
+
 '
 
 fit.mod <- sem(model_flux, data = data_flux_scaled, std.lv = TRUE, estimator = "MLM")
@@ -572,9 +575,8 @@ lavaanPlot(model = fit.mod, , graph_options = list(rankdir = "BT"), node_options
 ```{r}
 #refit the path models
 model_flux <- psem(
-  lm(DOsat_1.6m ~  mean_Chla + temp_1.6m, data_flux),
-  lm(mean_Chla ~ temp_1.6m, data_flux),
-  lm(iCH4_1.6m ~ DOsat_1.6m + mean_Chla + temp_1.6m, data_flux)
+  lm(DOsat_1.6m ~  mean_Chla + iCH4_9m, data_flux),
+  lm(iCH4_1.6m ~ DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m + DOsat_5m, data_flux)
 
 )
 
@@ -585,8 +587,8 @@ summary(model_flux)
 data_flux_scaled <- scale(data_flux)
 
 model_flux <- '
-  DOsat_1.6m ~  mean_Chla + iCH4_9m
-  iCH4_1.6m ~ DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m + iCH4_5m
+  DOsat_1.6m ~  mean_Chla + iCH4_9m 
+  iCH4_1.6m ~ DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m + DOsat_5m
   
 '
 
@@ -608,9 +610,11 @@ lavaanPlot(model = fit.mod, , graph_options = list(rankdir = "BT"), node_options
 ```{r}
 #fit the path models
 model_flux <- psem(
-  lm(DOsat_1.6m ~  mean_Chla, data_flux),
-  lm(iCH4_1.6m ~ DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m, data_flux),
-  lm(daily_CH4 ~ Wind + iCH4_1.6m + temp_1.6m + mean_Chla + iCH4_5m + DOsat_1.6m, data_flux)
+  lm(sch_stab ~  temp_1.6m + Wind, data_flux),
+  lm(iCH4_9m ~ DOsat_9m + sch_stab, data_flux),
+  lm(iCH4_5m ~ DOsat_5m + iCH4_9m + mean_fDOM, data_flux),
+  lm(iCH4_1.6m ~ Wind + DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m + iCH4_5m, data_flux),
+  lm(daily_CH4 ~ Wind + iCH4_1.6m + iCH4_5m + DOsat_5m, data_flux)
 
 )
 
@@ -622,10 +626,15 @@ summary(model_flux)
 data_flux_scaled <- scale(data_flux)
 
 model_flux <- '
-  DOsat_1.6m ~  mean_Chla
-  iCH4_1.6m ~ DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m 
-  daily_CH4 ~ Wind + iCH4_1.6m + temp_1.6m + mean_Chla + iCH4_5m + DOsat_1.6m
+  sch_stab ~ temp_1.6m + Wind
+  iCH4_9m ~ DOsat_9m + sch_stab
+  iCH4_5m ~ DOsat_5m + iCH4_9m + mean_fDOM
+  iCH4_1.6m ~ Wind + DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m + iCH4_5m
+  daily_CH4 ~ Wind + iCH4_1.6m + iCH4_5m + DOsat_5m 
+  iCH4_9m ~~  iCH4_1.6m
+  iCH4_5m ~~  iCH4_1.6m
 '
+
 
 fit.mod <- sem(model_flux, data = data_flux_scaled, std.lv = TRUE, estimator = "MLM")
 #MODEL FIT (Ideally non-significant p-value OR the ratio of chisq.scaled:df.scaled less than 3)
@@ -647,9 +656,11 @@ lavaanPlot(model = fit.mod, , graph_options = list(rankdir = "BT"), node_options
 ```{r}
 #fit the path models
 model_flux <- psem(
-  lm(DOsat_1.6m ~  mean_Chla, data_flux),
-  lm(iCH4_1.6m ~ DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m, data_flux),
-  lm(daily_CH4 ~ Wind + iCH4_1.6m + temp_1.6m + mean_Chla + iCH4_9m + DOsat_1.6m, data_flux)
+  lm(sch_stab ~  temp_1.6m + Wind, data_flux),
+  lm(iCH4_9m ~ DOsat_9m + sch_stab, data_flux),
+  lm(iCH4_5m ~ DOsat_5m + iCH4_9m + mean_fDOM, data_flux),
+  lm(iCH4_1.6m ~ Wind + DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m + iCH4_5m, data_flux),
+  lm(daily_CH4 ~ Wind + iCH4_1.6m + mean_Chla + iCH4_9m + DOsat_9m, data_flux)
 
 )
 
@@ -661,9 +672,13 @@ summary(model_flux)
 data_flux_scaled <- scale(data_flux)
 
 model_flux <- '
-  DOsat_1.6m ~  mean_Chla
-  iCH4_1.6m ~  DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m
-  daily_CH4 ~ Wind + iCH4_1.6m + temp_1.6m + mean_Chla + iCH4_9m + DOsat_1.6m
+  sch_stab ~ temp_1.6m + Wind
+  iCH4_9m ~ DOsat_9m + sch_stab
+  iCH4_5m ~ DOsat_5m + iCH4_9m + mean_fDOM
+  iCH4_1.6m ~ Wind + DOsat_1.6m + mean_Chla + sch_stab + iCH4_9m + iCH4_5m
+  daily_CH4 ~ Wind + iCH4_1.6m + mean_Chla + iCH4_9m + DOsat_9m
+  iCH4_9m ~~  iCH4_1.6m
+  iCH4_5m ~~  iCH4_1.6m
 '
 
 fit.mod <- sem(model_flux, data = data_flux_scaled, std.lv = TRUE, estimator = "MLM")
